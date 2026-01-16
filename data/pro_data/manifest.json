@@ -1,0 +1,27 @@
+{
+  "version": "2.4",
+  "latestMarketYear": 2024,
+  "latestLandingsYear": 2025,
+  "files": {
+    "marketYearFish": "market_year_fish.csv",
+    "marketYearFishCategory": "market_year_fish_category.csv",
+    "marketYearFishOriginTop": "market_year_fish_origin_top.csv",
+    "marketYearFishTopOrigin": "market_year_fish_top_origin.csv",
+    "marketYearCategoryShare": "market_year_category_share.csv",
+    "marketTopFishLatest": "market_top_fish_latest.csv",
+    "marketTopFishLatestByCategory": "market_top_fish_latest_by_category.csv",
+    "landingsTopFishLatest": "landings_top_fish_latest.csv",
+    "landingsYearFish": "landings_year_fish.csv",
+    "landingsMonthFish": "landings_month_fish.csv",
+    "landingsMonthFishArea": "landings_month_fish_area_top.csv",
+    "landingsMonthFishMethod": "landings_month_fish_method_top.csv",
+    "landingsYearFishAreaTop": "landings_year_fish_area_top.csv",
+    "landingsYearFishMethodTop": "landings_year_fish_method_top.csv",
+    "corrFish": "corr_fish_market_vs_landings.csv"
+  },
+  "topN": {
+    "origin": 10,
+    "area": 10,
+    "method": 10
+  }
+}

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish Market Watch | 魚市場・水揚げデータ</title>
+    <meta name="description" content="全国の市場（いちば）で売られている魚や、海でとれた魚のデータを見ることができるダッシュボードです。">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Scripts & Styles -->
+    <link rel="stylesheet" href="assets/app.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.js"></script>
+</head>
+<body class="dark-mode">
+    <div id="app">
+        <!-- Sidebar (Desktop) / Bottom Nav (Mobile) -->
+        <nav class="sidebar">
+            <div class="logo">
+                <img src="logo/logo.png" alt="Fish Market Watch" style="width: 100%; height: auto;">
+            </div>
+            <ul class="nav-links">
+                <li class="active" data-view="watchlist"><i data-lucide="list"></i><span>金沢中央卸売市場分析</span></li>
+                <li data-view="landings-list"><i data-lucide="ship"></i><span>石川県の水揚げ分析</span></li>
+            </ul>
+        </nav>
+
+        <main class="content">
+            <header class="top-bar">
+                <div class="search-container">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="global-search" placeholder="魚の名前、都道府県、とり方で検索...">
+                </div>
+                <div class="filter-group">
+                    <button class="filter-btn active" data-range="5Y">5年</button>
+                    <button class="filter-btn" data-range="10Y">10年</button>
+                    <button class="filter-btn" data-range="MAX">ぜんぶ</button>
+                </div>
+            </header>
+
+            <div id="view-container">
+                <!-- おさかなリスト (formerly Watchlist) View -->
+                <section id="view-watchlist" class="view active">
+                    <div class="view-header">
+                        <h1>金沢中央卸売市場</h1>
+                        <span class="updated-time">最新データ: 市場（2024年） / 水揚げ（2025年）</span>
+                    </div>
+                    <div class="filter-controls">
+                        <div class="tab-group" id="category-tabs">
+                            <button class="tab-btn active" data-category="all">すべて</button>
+                            <button class="tab-btn" data-category="鮮魚">鮮魚</button>
+                            <button class="tab-btn" data-category="冷凍魚">冷凍魚</button>
+                            <button class="tab-btn" data-category="塩干">塩干</button>
+                        </div>
+                        <div class="sort-group">
+                            <span class="sort-label">ならびかえ:</span>
+                            <select id="sort-select" class="sort-select">
+                                <option value="rank_amt">売れてる順（人気）</option>
+                                <option value="price_asc">ねだんが安い順</option>
+                                <option value="price_desc">ねだんが高い順</option>
+                                <option value="yoy_desc">あがっている順</option>
+                                <option value="yoy_asc">さがっている順</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="watchlist-grid" id="watchlist-items">
+                        <!-- Items injected by JS -->
+                        <div class="skeleton-loader"></div>
+                    </div>
+                </section>
+                
+                <!-- 漁獲量 (Landings) View -->
+                <section id="view-landings-list" class="view">
+                <!-- <div class="view-header">
+                    <div class="view-title-group">
+                        <h1>魚は、いつとれる？</h1>
+                        <p class="view-subtitle">色がこいほど、たくさんとれているよ。魚の名前をえらぶと、くわしいページにいけるよ。</p>
+                    </div>
+                </div> -->
+
+                <!-- コンテンツ②＆③：最新ランキング ＆ 年次推移 -->
+                <div class="landings-grid-layout">
+                    <section class="landings-section" id="top-rank-section">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>いま、たくさんとれている魚</h2>
+                            </div>
+                            <div id="landings-top-items" class="rank-list">
+                                <!-- JS でランキングを描画 -->
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="landings-section" id="yearly-trend-section">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>石川県の水揚げ量推移</h2>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="landings-total-trend-chart"></canvas>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- コンテンツ①：ヒートマップ -->
+                <section class="landings-section" id="heatmap-section" style="margin-top: 2rem;">
+                    <div class="card landings-heatmap-card">
+                        <div class="card-header heatmap-card-header">
+                            <h2>魚ごとの 旬（しゅん）カレンダー</h2>
+                            <div class="heatmap-legend-container">
+                                <!-- 凡例 (Heatmap Legend - Qty) -->
+                                <div class="heatmap-legend">
+                                    <span class="legend-label">とれた量: すくない</span>
+                                    <div class="legend-steps">
+                                        <div class="legend-step intensity-1"></div>
+                                        <div class="legend-step intensity-2"></div>
+                                        <div class="legend-step intensity-3"></div>
+                                        <div class="legend-step intensity-4"></div>
+                                        <div class="legend-step intensity-5"></div>
+                                    </div>
+                                    <span class="legend-label highlight-qty">大漁（旬！）</span>
+                                </div>
+                                <!-- 凡例 (Heatmap Legend - Price) -->
+                                <div class="heatmap-legend">
+                                    <span class="legend-label">お値段: やすい</span>
+                                    <div class="legend-steps">
+                                        <div class="legend-step intensity-p-1"></div>
+                                        <div class="legend-step intensity-p-2"></div>
+                                        <div class="legend-step intensity-p-3"></div>
+                                        <div class="legend-step intensity-p-4"></div>
+                                        <div class="legend-step intensity-p-5"></div>
+                                    </div>
+                                    <span class="legend-label highlight-price">たかい！</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="landings-main-heatmap" class="heatmap-grid-container">
+                            <!-- JS でヒートマップを描画 -->
+                        </div>
+                    </div>
+                </section>
+        <div class="skeleton-loader"></div>
+                </section>
+
+                <!-- Fish Detail View (Overlay or Separate Section) -->
+                <section id="view-detail" class="view">
+                    <div class="detail-header">
+                        <button class="back-btn"><i data-lucide="chevron-left"></i> もどる</button>
+                        <div class="fish-title-container">
+                            <h2 id="detail-fish-name">---</h2>
+                            <div class="correl-badge" id="detail-correl">-</div>
+                        </div>
+                    </div>
+                    <div class="detail-grid">
+                        <div class="card chart-container" id="detail-chart-card">
+                            <h3>価格（かかく）と売れた量（いちば）</h3>
+                            <canvas id="market-chart"></canvas>
+                        </div>
+                        <div id="landings-drilldown-container" class="drilldown-filter-section" style="display:none;">
+                            <div class="drilldown-group">
+                                <div class="filter-label">全体:</div>
+                                <div id="drilldown-tabs-all" class="drilldown-tabs"></div>
+                            </div>
+                            <div class="drilldown-group">
+                                <div class="filter-label">地区別（ちくべつ）:</div>
+                                <div id="drilldown-tabs-area" class="drilldown-tabs"></div>
+                            </div>
+                            <div class="drilldown-group">
+                                <div class="filter-label">漁法別（ぎょほうべつ）:</div>
+                                <div id="drilldown-tabs-method" class="drilldown-tabs"></div>
+                            </div>
+                        </div>
+                        <div class="card chart-container" id="detail-landings-chart-card">
+                            <h3>月ごとの推移（漁獲量と価格）</h3>
+                            <canvas id="landings-monthly-chart"></canvas>
+                        </div>
+                        <div class="card info-card" id="detail-heatmap-card">
+                            <div id="landings-heatmap" class="heatmap"></div>
+                        </div>
+                        <div class="card info-card" id="detail-stats-card">
+                            <div id="detail-card-title" class="card-header" style="display:none; margin-bottom: 1rem;">
+                                <h3 style="margin:0;">中央市場の仕入先</h3>
+                            </div>
+                            <div class="card-header-tabs" id="detail-card-tabs">
+                                <button class="card-tab active" data-tab="area">主な地区</button>
+                                <button class="card-tab" data-tab="method">とり方</button>
+                                <button class="card-tab" data-tab="origin">中央市場の仕入先</button>
+                            </div>
+                            <ul id="detail-stats-list" class="stats-list"></ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Overview View -->
+                <section id="view-overview" class="view">
+                    <h1>市場（いちば）の全体のようす</h1>
+                    <div class="overview-cards">
+                        <div class="card">
+                            <h3>売れた金額の合計</h3>
+                            <div class="big-number" id="total-market-amt">---</div>
+                        </div>
+                        <div class="card chart-full">
+                            <h3>魚の種類ごとの割合（シェア）</h3>
+                            <canvas id="category-share-chart"></canvas>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Other views will be implemented similarly -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav">
+        <div class="nav-item active" data-view="watchlist"><i data-lucide="list"></i><span>金沢中央卸売市場分析</span></div>
+        <div class="nav-item" data-view="landings-list"><i data-lucide="ship"></i><span>石川県の水揚げ分析</span></div>
+    </nav>
+
+    <script src="src/app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

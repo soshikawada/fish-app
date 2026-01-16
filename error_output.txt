@@ -1,0 +1,17 @@
+﻿python : Python 
+発生場所 行:1 文字:1
++ python scripts/prepr
+ocess.py 2>&1 | Out-Fi
+le -Encoding utf8 erro
+r_out ...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (Python :St   
+ ring) [], RemoteE    
+xception
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
