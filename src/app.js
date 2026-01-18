@@ -50,17 +50,35 @@ const App = {
 
     async init() {
         console.log("Initializing App...");
+        // Start the minimum 7-second timer immediately
+        const minimumLoadTime = new Promise(resolve => setTimeout(resolve, 7000));
+        
         try {
-            const response = await fetch('data/pro_data/manifest.json');
-            this.state.manifest = await response.json();
+            // 1. Fetch manifest and then start data loading in parallel with the timer
+            const manifest = await fetch('data/pro_data/manifest.json').then(r => r.json());
+            this.state.manifest = manifest;
             
-            await this.loadInitialData();
+            // Start data loading
+            const dataLoading = this.loadInitialData();
+            
+            // 2. Wait for BOTH data loading and the 7-second animation timer to complete
+            await Promise.all([dataLoading, minimumLoadTime]);
+            
+            // 3. Setup and render initial view
             this.setupEventListeners();
             this.renderWatchlist();
             
             if (window.lucide) lucide.createIcons();
+
+            // 4. Wait for a couple of frames to ensure the browser has painted the cards
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+            // 5. Finally, hide the loader
+            document.body.classList.add('loaded');
+            console.log("App ready and loader hidden.");
         } catch (error) {
             console.error("Initialization failed:", error);
+            document.body.classList.add('loaded');
         }
     },
 
