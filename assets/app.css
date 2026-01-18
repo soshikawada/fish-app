@@ -135,6 +135,7 @@ h1, h2, h3, .logo {
 
 .filter-group {
   display: flex;
+  justify-content: center;
   background: var(--card-bg);
   padding: 4px;
   border-radius: 10px;
@@ -272,7 +273,7 @@ h1, h2, h3, .logo {
 
 .landings-grid-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -360,6 +361,14 @@ h1, h2, h3, .logo {
   line-height: 1;
 }
 
+.heatmap-row-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px; /* Explicit height for alignment */
+}
 .price-label {
   font-size: 0.65rem;
   color: var(--text-secondary);
@@ -538,44 +547,85 @@ h1, h2, h3, .logo {
   text-align: center;
 }
 
-/* New Detail Heatmap Styles */
+/* Consolidated Detail Heatmap Styles */
 .heatmap-header-row.details-header {
-  grid-template-columns: 60px repeat(12, 1fr);
+  grid-template-columns: 50px 40px 1fr;
+  width: 100%;
+  margin-bottom: 12px;
 }
 
 .heatmap-year-group-detail {
   display: grid;
-  grid-template-columns: 60px 1fr;
-  gap: 4px; /* Reduced gap between year label and data */
-  margin-bottom: 8px; /* Space between Year Groups */
+  grid-template-columns: 50px 40px 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
   align-items: center;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   padding-bottom: 8px;
+  width: 100%;
 }
 
 .heatmap-year-label-col {
-  font-size: 0.8rem;
+  font-family: 'Outfit', sans-serif;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--accent-secondary);
+  font-size: 0.85rem;
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+
+.heatmap-row-label-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+
+.heatmap-row-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  height: 28px; /* Increased from 24px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .heatmap-data-rows-detail {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
 }
 
 .heatmap-row-detail {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 4px;
+  width: 100%;
+  height: 28px; /* Fixed height to match label row */
 }
 
-.heatmap-row-detail.price .heatmap-cell {
-  /* Height removed to match qty row */
-  font-size: 0.6rem;
+.heatmap-cell {
+  height: 100%; /* Fill the row height */
+  aspect-ratio: auto; /* REMOVED aspect-ratio to prevent overflow */
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.9);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.heatmap-header-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  font-weight: 600;
 }
 
 /* Original Heatmap Headers (adjust if needed) */
@@ -746,7 +796,33 @@ h1, h2, h3, .logo {
   100% { opacity: 0.3; }
 }
 
-/* Mobile Nav */
+/* Mobile Nav */.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: nowrap; /* Prevent wrapping */
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap; /* Prevent button text from wrapping */
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-color);
+}
 .mobile-nav {
   display: none;
   position: fixed;
@@ -792,9 +868,6 @@ h1, h2, h3, .logo {
   }
   .search-container {
     max-width: none;
-  }
-  .filter-group {
-    justify-content: center;
   }
   .content {
     padding: 1.5rem;
@@ -849,6 +922,13 @@ h1, h2, h3, .logo {
   gap: 1rem;
 }
 
+@media (max-width: 600px) {
+  .heatmap-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 .heatmap-legend {
   display: flex;
   align-items: center;
@@ -900,12 +980,7 @@ h1, h2, h3, .logo {
 .intensity-p-4 { background: rgba(245, 158, 11, 0.8); }
 .intensity-p-5 { background: rgba(245, 158, 11, 1); box-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
 
-.landings-grid-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin-top: 1.5rem;
-}
+/* Removed duplicate landings-grid-layout */
 
 .landings-heatmap-card {
   padding: 1.5rem;
@@ -916,15 +991,33 @@ h1, h2, h3, .logo {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 800px;
 }
 
-.heatmap-row {
+/* Default Desktop Layout */
+.heatmap-header-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.heatmap-header-spacer {
+  width: 120px;
+}
+
+.heatmap-header-months {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 4px;
-  align-items: center;
-  transition: background 0.2s;
+}
+
+.heatmap-header-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-align: center;
 }
 
 .heatmap-fish-group {
@@ -936,6 +1029,61 @@ h1, h2, h3, .logo {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   cursor: pointer;
   transition: background 0.2s;
+}
+
+.heatmap-row {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
+}
+
+/* Mobile Responsive Layout (6x2 Grid) */
+@media (max-width: 600px) {
+  .landings-heatmap-card {
+    padding: 1rem;
+    overflow-x: hidden; /* No scroll! */
+  }
+
+  .heatmap-header-row {
+    display: flex;
+    flex-direction: column;
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+  .heatmap-header-spacer {
+    display: none;
+  }
+  .heatmap-header-months {
+    grid-template-columns: repeat(12, 1fr);
+    margin-bottom: 2px;
+    gap: 1px; /* Minimal gap */
+  }
+  .heatmap-header-label {
+    font-size: 0.5rem;
+    text-align: center;
+  }
+
+  .heatmap-fish-group {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 10px 0;
+  }
+  .heatmap-label-block {
+    text-align: left;
+  }
+  .heatmap-fish-label {
+    font-size: 0.85rem;
+  }
+  .heatmap-row {
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1px;
+  }
+  .heatmap-cell-main {
+    aspect-ratio: 1;
+    min-width: 0; /* Allow shrinking */
+  }
 }
 
 .heatmap-fish-group:hover {
@@ -1037,6 +1185,14 @@ h1, h2, h3, .logo {
   color: var(--text-secondary);
 }
 
+.landings-grid-layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+  margin-bottom: 2rem;
+}
+
 @media (max-width: 1024px) {
   .landings-grid-layout {
     grid-template-columns: 1fr;
@@ -1103,3 +1259,61 @@ h1, h2, h3, .logo {
   box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
 }
 
+@media (max-width: 600px) {
+  .heatmap-year-group-detail {
+    grid-template-columns: 50px 30px 1fr;
+    gap: 4px;
+  }
+  .heatmap-year-label-col {
+    font-size: 0.7rem;
+  }
+}
+.heatmap-sort-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sort-select {
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.sort-btn {
+  padding: 0.4rem 1.25rem;
+  border-radius: 8px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.sort-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.sort-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 600px) {
+  .heatmap-sort-controls {
+    gap: 0.4rem;
+    padding: 8px;
+  }
+}

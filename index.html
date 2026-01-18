@@ -36,11 +36,6 @@
                     <i data-lucide="search"></i>
                     <input type="text" id="global-search" placeholder="魚の名前、都道府県、とり方で検索...">
                 </div>
-                <div class="filter-group">
-                    <button class="filter-btn active" data-range="5Y">5年</button>
-                    <button class="filter-btn" data-range="10Y">10年</button>
-                    <button class="filter-btn" data-range="MAX">ぜんぶ</button>
-                </div>
             </header>
 
             <div id="view-container">
@@ -56,6 +51,11 @@
                             <button class="tab-btn" data-category="鮮魚">鮮魚</button>
                             <button class="tab-btn" data-category="冷凍魚">冷凍魚</button>
                             <button class="tab-btn" data-category="塩干">塩干</button>
+                        </div>
+                        <div class="filter-group" style="margin: 0">
+                            <button class="filter-btn active" data-range="5Y">5年</button>
+                            <button class="filter-btn" data-range="10Y">10年</button>
+                            <button class="filter-btn" data-range="MAX">ぜんぶ</button>
                         </div>
                         <div class="sort-group">
                             <span class="sort-label">ならびかえ:</span>
@@ -88,7 +88,7 @@
                     <section class="landings-section" id="top-rank-section">
                         <div class="card">
                             <div class="card-header">
-                                <h2>いま、たくさんとれている魚</h2>
+                                <h2>最新年のたくさんとれている魚</h2>
                             </div>
                             <div id="landings-top-items" class="rank-list">
                                 <!-- JS でランキングを描画 -->
@@ -114,6 +114,29 @@
                         <div class="card-header heatmap-card-header">
                             <h2>魚ごとの 旬（しゅん）カレンダー</h2>
                             <div class="heatmap-legend-container">
+                                <!-- 並び替えコントロール (Sort Controls) -->
+                                <div class="heatmap-sort-controls">
+                                    <select id="landings-sort-month" class="sort-select">
+                                        <option value="">月を選択</option>
+                                        <option value="1">1月</option>
+                                        <option value="2">2月</option>
+                                        <option value="3">3月</option>
+                                        <option value="4">4月</option>
+                                        <option value="5">5月</option>
+                                        <option value="6">6月</option>
+                                        <option value="7">7月</option>
+                                        <option value="8">8月</option>
+                                        <option value="9">9月</option>
+                                        <option value="10">10月</option>
+                                        <option value="11">11月</option>
+                                        <option value="12">12月</option>
+                                    </select>
+                                    <select id="landings-sort-metric" class="sort-select">
+                                        <option value="qty">水揚げ量</option>
+                                        <option value="price">価格</option>
+                                    </select>
+                                    <button id="landings-sort-btn" class="sort-btn">並び替え</button>
+                                </div>
                                 <!-- 凡例 (Heatmap Legend - Qty) -->
                                 <div class="heatmap-legend">
                                     <span class="legend-label">とれた量: すくない</span>
@@ -152,10 +175,7 @@
                 <section id="view-detail" class="view">
                     <div class="detail-header">
                         <button class="back-btn"><i data-lucide="chevron-left"></i> もどる</button>
-                        <div class="fish-title-container">
-                            <h2 id="detail-fish-name">---</h2>
-                            <div class="correl-badge" id="detail-correl">-</div>
-                        </div>
+                        <h2 id="detail-fish-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; font-size: 1.25rem;">---</h2>
                     </div>
                     <div class="detail-grid">
                         <div class="card chart-container" id="detail-chart-card">
@@ -163,17 +183,20 @@
                             <canvas id="market-chart"></canvas>
                         </div>
                         <div id="landings-drilldown-container" class="drilldown-filter-section" style="display:none;">
-                            <div class="drilldown-group">
-                                <div class="filter-label">全体:</div>
-                                <div id="drilldown-tabs-all" class="drilldown-tabs"></div>
-                            </div>
-                            <div class="drilldown-group">
-                                <div class="filter-label">地区別（ちくべつ）:</div>
-                                <div id="drilldown-tabs-area" class="drilldown-tabs"></div>
-                            </div>
-                            <div class="drilldown-group">
-                                <div class="filter-label">漁法別（ぎょほうべつ）:</div>
-                                <div id="drilldown-tabs-method" class="drilldown-tabs"></div>
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+                                <div class="drilldown-group" style="flex: 1; min-width: 150px;">
+                                    <div class="filter-label">地区選択（ちくべつ）:</div>
+                                    <select id="detail-filter-area" class="sort-select" style="width: 100%;">
+                                        <option value="all">すべて</option>
+                                    </select>
+                                </div>
+                                <div class="drilldown-group" style="flex: 1; min-width: 150px;">
+                                    <div class="filter-label">漁法選択（ぎょほうべつ）:</div>
+                                    <select id="detail-filter-method" class="sort-select" style="width: 100%;">
+                                        <option value="all">すべて</option>
+                                    </select>
+                                </div>
+                                <button id="detail-filter-apply" class="sort-btn" style="height: 38px;">適用する</button>
                             </div>
                         </div>
                         <div class="card chart-container" id="detail-landings-chart-card">
@@ -181,6 +204,14 @@
                             <canvas id="landings-monthly-chart"></canvas>
                         </div>
                         <div class="card info-card" id="detail-heatmap-card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                                <h3 style="margin:0;">しゅんのカレンダー</h3>
+                                <div class="filter-group" style="margin: 0">
+                                    <button class="filter-btn active" data-range="5Y">5年</button>
+                                    <button class="filter-btn" data-range="10Y">10年</button>
+                                    <button class="filter-btn" data-range="MAX">ぜんぶ</button>
+                                </div>
+                            </div>
                             <div id="landings-heatmap" class="heatmap"></div>
                         </div>
                         <div class="card info-card" id="detail-stats-card">

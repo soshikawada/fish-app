@@ -19,6 +19,8 @@ const App = {
             landingsTopMethod: [],
             landingsMonthArea: [],
             landingsMonthMethod: [],
+            landingsMonthlyAreaMethod: [], // New
+            landingsYearlyAreaTop: [],     // New
             correlations: []
         },
         currView: 'watchlist',
@@ -27,9 +29,12 @@ const App = {
         range: '5Y',
         sortMode: 'rank_amt',
         landingsGrain: 'yearly',
-        lastListView: 'watchlist',
+        landingsSortMonth: null,
+        landingsSortMetric: 'qty', // 'qty' or 'price'
+        lastListView: 'watchlist', // Track which list view was last used
         currDetailTab: 'area',
-        detailFilter: { type: 'all', value: null }
+        landingsDetailArea: 'all', // New state for landings detail filter
+        landingsDetailMethod: 'all' // New state for landings detail filter
     },
 
     getThemeColors() {
@@ -63,7 +68,7 @@ const App = {
         console.log("Loading initial data...");
         const files = this.state.manifest.files;
         
-        const [marketLatest, marketLatestCat, marketYearly, marketYearFishCat, landingsLatest, landingsYearly, landingsMonthly, marketOrigin, marketTopOrigin, corrFish, landingsTopArea, landingsTopMethod, landingsMonthArea, landingsMonthMethod] = await Promise.all([
+        const [marketLatest, marketLatestCat, marketYearly, marketYearFishCat, landingsLatest, landingsYearly, landingsMonthly, marketOrigin, marketTopOrigin, corrFish, landingsTopArea, landingsTopMethod, landingsMonthArea, landingsMonthMethod, landingsMonthlyAreaMethod, landingsYearlyAreaTop] = await Promise.all([
             this.fetchCSV(`data/pro_data/${files.marketTopFishLatest}`),
             this.fetchCSV(`data/pro_data/${files.marketTopFishLatestByCategory}`),
             this.fetchCSV(`data/pro_data/${files.marketYearFish}`),
@@ -77,7 +82,9 @@ const App = {
             this.fetchCSV(`data/pro_data/${files.landingsYearFishAreaTop}`),
             this.fetchCSV(`data/pro_data/${files.landingsYearFishMethodTop}`),
             this.fetchCSV(`data/pro_data/${files.landingsMonthFishArea}`),
-            this.fetchCSV(`data/pro_data/${files.landingsMonthFishMethod}`)
+            this.fetchCSV(`data/pro_data/${files.landingsMonthFishMethod}`),
+            this.fetchCSV(`data/pro_data/${files.landingsMonthFishAreaMethod}`), // New data source
+            this.fetchCSV(`data/pro_data/${files.landingsYearFishAreaTop}`) // New data source
         ]);
 
         this.state.data.marketLatest = marketLatest;
@@ -93,6 +100,8 @@ const App = {
         this.state.data.landingsTopMethod = landingsTopMethod || [];
         this.state.data.landingsMonthArea = landingsMonthArea || [];
         this.state.data.landingsMonthMethod = landingsMonthMethod || [];
+        this.state.data.landingsMonthlyAreaMethod = landingsMonthlyAreaMethod || []; // Assign new data
+        this.state.data.landingsYearlyAreaTop = landingsYearlyAreaTop || []; // Assign new data
         this.state.data.correlations = corrFish;
     },
 
@@ -137,16 +146,22 @@ const App = {
             });
         }
 
-        // Range filters
+        // Range filters (Synced across views)
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                this.state.range = e.target.dataset.range;
+                const range = e.target.dataset.range;
+                this.state.range = range;
+                
+                // Sync all range buttons' active state
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.range === range);
+                });
                 
                 if (this.state.currView === 'detail' && this.state.selectedFish) {
                     this.renderCharts(this.state.selectedFish);
                     this.renderSeasonality(this.state.selectedFish);
+                    this.renderLandingsYearlyChart(this.state.selectedFish); // Re-render yearly chart for landings
+                    this.renderLandingsChart(this.state.selectedFish); // Re-render monthly chart for landings
                 }
                 if (this.state.currView === 'watchlist') this.renderWatchlist();
                 if (this.state.currView === 'landings-list') this.renderLandingsList();
@@ -178,6 +193,18 @@ const App = {
         });
 
         // Landings Sort
+        const sortBtn = document.getElementById('landings-sort-btn');
+        if (sortBtn) {
+            sortBtn.addEventListener('click', () => {
+                const monthVal = document.getElementById('landings-sort-month').value;
+                const metricVal = document.getElementById('landings-sort-metric').value;
+                
+                this.state.landingsSortMonth = monthVal ? parseInt(monthVal) : null;
+                this.state.landingsSortMetric = metricVal;
+                
+                this.renderLandingsList();
+            });
+        }
         const lSortSelect = document.getElementById('landings-sort-select');
         if (lSortSelect) {
             lSortSelect.addEventListener('change', () => this.renderLandingsList());
@@ -205,6 +232,31 @@ const App = {
                 }
             });
         });
+
+        // Landings Detail Filters (Area/Method)
+        const detailFilterArea = document.getElementById('detail-filter-area');
+        const detailFilterMethod = document.getElementById('detail-filter-method');
+
+        if (detailFilterArea) {
+            detailFilterArea.addEventListener('change', (e) => {
+                this.state.landingsDetailArea = e.target.value;
+                if (this.state.selectedFish) {
+                    this.renderLandingsYearlyChart(this.state.selectedFish);
+                    this.renderLandingsChart(this.state.selectedFish);
+                    this.renderSeasonality(this.state.selectedFish);
+                }
+            });
+        }
+        if (detailFilterMethod) {
+            detailFilterMethod.addEventListener('change', (e) => {
+                this.state.landingsDetailMethod = e.target.value;
+                if (this.state.selectedFish) {
+                    this.renderLandingsYearlyChart(this.state.selectedFish);
+                    this.renderLandingsChart(this.state.selectedFish);
+                    this.renderSeasonality(this.state.selectedFish);
+                }
+            });
+        }
     },
 
     switchView(viewId) {
@@ -221,11 +273,7 @@ const App = {
             li.classList.toggle('active', li.dataset.view === viewId);
         });
 
-        // Toggle global filter visibility
-        const filterGroup = document.querySelector('.filter-group');
-        if (filterGroup) {
-            filterGroup.style.display = (viewId === 'watchlist' || viewId === 'detail') ? 'flex' : 'none';
-        }
+        // Toggle global search visibility if needed (filter-group is now per-view)
 
         if (viewId === 'overview') this.renderOverview();
         if (viewId === 'watchlist') this.renderWatchlist();
@@ -305,10 +353,10 @@ const App = {
                         <canvas id="sparkline-${fishKey}" class="fish-sparkline"></canvas>
                     </div>
                     <div class="fish-card-metrics">
-                        <div class="metric-item"><div class="metric-label">売上シェア率</div><div class="metric-value">${share}%</div></div>
-                        <div class="metric-item"><div class="metric-label">漁獲量</div><div class="metric-value">${(item.latest_qty / 10000).toFixed(1)}万t</div></div>
-                        <div class="metric-item"><div class="metric-label">売れてる産地</div><div class="metric-value">${amtOrigin}</div></div>
-                        <div class="metric-item"><div class="metric-label">仕入れ量の多い産地</div><div class="metric-value">${qtyOrigin}</div></div>
+                        <div class="metric-item"><div class="metric-label">最新年の売上シェア率</div><div class="metric-value">${share}%</div></div>
+                        <div class="metric-item"><div class="metric-label">最新年の販売量</div><div class="metric-value">${Math.round(item.latest_qty / 1000).toLocaleString()}t</div></div>
+                        <div class="metric-item"><div class="metric-label">最新年の売れてる産地</div><div class="metric-value">${amtOrigin}</div></div>
+                        <div class="metric-item"><div class="metric-label">最新年の仕入れ量の多い産地</div><div class="metric-value">${qtyOrigin}</div></div>
                     </div>
                 </div>
             `;
@@ -399,10 +447,34 @@ const App = {
             return;
         }
 
+        // --- Sort Logic ---
+        if (this.state.landingsSortMonth !== null) {
+            const mIdx = this.state.landingsSortMonth - 1;
+            const metric = this.state.landingsSortMetric;
+            
+            filteredKeys.sort((a, b) => {
+                const dataA = fishMonthlyMap[a];
+                const dataB = fishMonthlyMap[b];
+                
+                let valA, valB;
+                if (metric === 'qty') {
+                    valA = dataA.monthsQty[mIdx] || 0;
+                    valB = dataB.monthsQty[mIdx] || 0;
+                } else {
+                    // Average price for that month
+                    valA = dataA.monthsPriceCount[mIdx] > 0 ? dataA.monthsPriceSum[mIdx] / dataA.monthsPriceCount[mIdx] : 0;
+                    valB = dataB.monthsPriceCount[mIdx] > 0 ? dataB.monthsPriceSum[mIdx] / dataB.monthsPriceCount[mIdx] : 0;
+                }
+                return valB - valA; // Descending
+            });
+        }
+
         let heatmapHtml = `
             <div class="heatmap-header-row">
-                <div class="heatmap-fish-label" style="text-align: right">魚種 / 月</div>
-                ${Array.from({length: 12}, (_, i) => `<div class="heatmap-header-label">${i+1}月</div>`).join('')}
+                <div class="heatmap-header-spacer"></div>
+                <div class="heatmap-header-months">
+                    ${Array.from({length: 12}, (_, i) => `<div class="heatmap-header-label">${i+1}月</div>`).join('')}
+                </div>
             </div>
         `;
 
@@ -416,7 +488,7 @@ const App = {
                 <div class="heatmap-fish-group" data-key="${key}">
                     <div class="heatmap-label-block">
                         <div class="heatmap-fish-label">${data.label}</div>
-                        <div class="heatmap-sublabel-hint">お値段 (価格)</div>
+                        <div class="heatmap-sublabel-hint">（上が量 / 下が価格）</div>
                     </div>
                     <div class="heatmap-data-block">
                         <div class="heatmap-row qty-row">
@@ -451,7 +523,7 @@ const App = {
                 <div class="rank-number">${idx + 1}</div>
                 <div class="rank-info">
                     <div class="rank-name">${item.fish_label}</div>
-                    <div class="rank-val">水揚げ量: ${(item.qty / 1000).toLocaleString()} t</div>
+                    <div class="rank-val">最新年の水揚げ量: ${(item.qty / 1000).toLocaleString()} t</div>
                 </div>
             </div>
         `).join('');
@@ -547,16 +619,6 @@ const App = {
         document.getElementById('detail-fish-name').textContent = fish ? fish.fish_label : fishKey;
         
         const corr = this.state.data.correlations.find(c => c.fish_key === fishKey);
-        const correlBadge = document.getElementById('detail-correl');
-        if (corr) {
-            const score = corr.corr_price;
-            let level = score > 0.7 ? 'とっても関係があるよ！' : (score > 0.4 ? 'ちょっと関係があるよ' : 'あまり関係ないかも');
-            correlBadge.textContent = `${level} (スコア: ${score})`;
-            correlBadge.className = `correl-badge ${score > 0.7 ? 'strong' : (score > 0.4 ? 'moderate' : '')}`;
-        } else {
-            correlBadge.textContent = '関係のデータがありません';
-            correlBadge.className = 'correl-badge';
-        }
 
         // Context-aware Visibility Logic
         const isFromLandings = this.state.lastListView === 'landings-list';
@@ -570,7 +632,8 @@ const App = {
         const landingsYearlyChartCard = document.getElementById('detail-landings-yearly-chart-card');
 
         // Reset filter
-        this.state.detailFilter = { type: 'all', value: null };
+        this.state.landingsDetailArea = 'all';
+        this.state.landingsDetailMethod = 'all';
 
         if (isFromLandings) {
             // "Landings" entry: Focus on catch data
@@ -583,10 +646,25 @@ const App = {
             if (drilldownContainer) drilldownContainer.style.display = 'flex';
             if (landingsYearlyChartCard) landingsYearlyChartCard.style.display = 'block';
             
-            this.renderDrillDownTabs(fishKey);
-            this.renderLandingsYearlyChart(fishKey);
-            this.renderLandingsChart(fishKey);
+            // Load multi-filter options
+            const amData = this.state.data.landingsMonthlyAreaMethod.filter(d => d.fish_key === fishKey);
+            const areas = [...new Set(amData.map(d => d.area))].sort();
+            const methods = [...new Set(amData.map(d => d.method))].sort();
             
+            const areaSelect = document.getElementById('detail-filter-area');
+            const methodSelect = document.getElementById('detail-filter-method');
+            
+            if (areaSelect) {
+                areaSelect.innerHTML = '<option value="all">すべて（全地区）</option>' + 
+                    areas.map(a => `<option value="${a}">${a}</option>`).join('');
+                areaSelect.value = this.state.landingsDetailArea;
+            }
+            if (methodSelect) {
+                methodSelect.innerHTML = '<option value="all">すべて（全漁法）</option>' + 
+                    methods.map(m => `<option value="${m}">${m}</option>`).join('');
+                methodSelect.value = this.state.landingsDetailMethod;
+            }
+
             const statsList = document.getElementById('detail-stats-list');
             if (statsList) statsList.style.marginTop = '0';
             this.state.currDetailTab = 'area'; // Default to Area
@@ -603,16 +681,19 @@ const App = {
             if (titleContainer) titleContainer.style.display = 'none';
             if (drilldownContainer) drilldownContainer.style.display = 'none';
             
-            this.renderCharts(fishKey);
-
             const statsList = document.getElementById('detail-stats-list');
             if (statsList) statsList.style.marginTop = '1.5rem';
             this.state.currDetailTab = 'origin'; // Force to Supplier
         }
 
-        this.renderSeasonality(fishKey);
+        if (this.state.selectedFish) {
+            this.renderCharts(this.state.selectedFish);
+            this.renderSeasonality(this.state.selectedFish);
+            this.renderLandingsYearlyChart(this.state.selectedFish); // Call for landings yearly chart
+            this.renderLandingsChart(this.state.selectedFish); // Call for landings monthly chart
+            this.renderDetailStats(this.state.selectedFish);
+        }
         this.updateDetailTabsUI();
-        this.renderDetailStats(fishKey);
     },
 
     updateDetailTabsUI() {
@@ -621,27 +702,25 @@ const App = {
     },
 
     renderLandingsYearlyChart(fishKey) {
-        let yearlyData = [];
-        if (this.state.detailFilter.type === 'area') {
-            yearlyData = this.state.data.landingsMonthArea.filter(d => d.fish_key === fishKey && d.area === this.state.detailFilter.value);
-        } else if (this.state.detailFilter.type === 'method') {
-            yearlyData = this.state.data.landingsMonthMethod.filter(d => d.fish_key === fishKey && d.method === this.state.detailFilter.value);
-        } else {
-            yearlyData = this.state.data.landingsMonthly.filter(d => d.fish_key === fishKey);
-        }
-
-        // Aggregate by year
-        const yearMap = {};
-        yearlyData.forEach(d => {
-            if (!yearMap[d.year]) yearMap[d.year] = { qty: 0, amt: 0 };
-            yearMap[d.year].qty += (d.qty || 0);
-            yearMap[d.year].amt += (d.amt || 0);
+        // Multi-filtered Yearly Data Calculation
+        const rawData = this.state.data.landingsMonthlyAreaMethod.filter(d => d.fish_key === fishKey);
+        const filtered = rawData.filter(d => {
+            const areaMatch = this.state.landingsDetailArea === 'all' || d.area === this.state.landingsDetailArea;
+            const methodMatch = this.state.landingsDetailMethod === 'all' || d.method === this.state.landingsDetailMethod;
+            return areaMatch && methodMatch;
         });
 
-        const sortedYears = Object.keys(yearMap).sort((a,b) => a-b);
+        const yearlyMap = {};
+        filtered.forEach(d => {
+            if (!yearlyMap[d.year]) yearlyMap[d.year] = { qty: 0, amt: 0 };
+            yearlyMap[d.year].qty += d.qty;
+            yearlyMap[d.year].amt += d.amt;
+        });
+
+        const sortedYears = Object.keys(yearlyMap).sort((a,b) => a-b);
         const labels = sortedYears.map(y => `${y}年`);
-        const qtyValues = sortedYears.map(y => yearMap[y].qty);
-        const priceValues = sortedYears.map(y => yearMap[y].qty > 0 ? yearMap[y].amt / yearMap[y].qty : 0);
+        const qtyValues = sortedYears.map(y => yearlyMap[y].qty / 1000);
+        const priceValues = sortedYears.map(y => yearlyMap[y].qty > 0 ? yearlyMap[y].amt / yearlyMap[y].qty : 0);
 
         const ctxElement = document.getElementById('landings-yearly-trend-chart');
         if (!ctxElement) return;
@@ -678,8 +757,24 @@ const App = {
                 maintainAspectRatio: false,
                 plugins: { legend: { labels: { color: colors.text } } },
                 scales: {
-                    'y-qty': { position: 'left', title: { display: true, text: '漁獲量 (t)', color: colors.primary }, ticks: { color: colors.text }, grid: { color: colors.grid } },
-                    'y-price': { position: 'right', title: { display: true, text: '価格 (円/kg)', color: colors.accent }, grid: { drawOnChartArea: false }, ticks: { color: colors.text } },
+                    'y-qty': { 
+                        position: 'left', 
+                        title: { display: true, text: '漁獲量 (t)', color: colors.primary }, 
+                        ticks: { 
+                            color: colors.text,
+                            callback: (val) => val >= 1000 ? (val/1000).toFixed(1) + 'k' : val
+                        }, 
+                        grid: { color: colors.grid } 
+                    },
+                    'y-price': { 
+                        position: 'right', 
+                        title: { display: true, text: '価格', color: colors.accent }, 
+                        grid: { drawOnChartArea: false }, 
+                        ticks: { 
+                            color: colors.text,
+                            callback: (val) => val >= 10000 ? (val/10000).toFixed(0) + '万' : val
+                        } 
+                    },
                     x: { ticks: { color: colors.text }, grid: { color: colors.grid } }
                 }
             }
@@ -710,7 +805,7 @@ const App = {
                     },
                     {
                         type: 'bar',
-                        label: '売れた量 (t)',
+                        label: '販売量 (t)',
                         data: marketData.map(d => d.qty / 1000),
                         backgroundColor: colors.accent + '66', // 40% opacity
                         borderColor: colors.accent,
@@ -726,17 +821,23 @@ const App = {
                 scales: {
                     'y-price': { 
                         position: 'left', 
-                        title: { display: true, text: 'ねだん', color: colors.primary }, 
+                        title: { display: true, text: '価格', color: colors.primary }, 
                         grid: { color: colors.grid }, 
-                        ticks: { color: colors.text },
-                        grace: '50%'
+                        ticks: { 
+                            color: colors.text,
+                            callback: (val) => val >= 10000 ? (val/10000).toFixed(0) + '万' : val
+                        },
+                        grace: '5%'
                     },
                     'y-qty': { 
                         position: 'right', 
-                        title: { display: true, text: '売れた量', color: colors.accent }, 
+                        title: { display: true, text: '量', color: colors.accent }, 
                         grid: { drawOnChartArea: false }, 
-                        ticks: { color: colors.text },
-                        grace: '50%'
+                        ticks: { 
+                            color: colors.text,
+                            callback: (val) => val
+                        },
+                        grace: '5%'
                     },
                     x: { ticks: { color: colors.text }, grid: { color: colors.grid } }
                 }
@@ -745,14 +846,25 @@ const App = {
     },
 
     renderLandingsChart(fishKey) {
-        let monthlyData = [];
-        if (this.state.detailFilter.type === 'area') {
-            monthlyData = this.state.data.landingsMonthArea.filter(d => d.fish_key === fishKey && d.area === this.state.detailFilter.value);
-        } else if (this.state.detailFilter.type === 'method') {
-            monthlyData = this.state.data.landingsMonthMethod.filter(d => d.fish_key === fishKey && d.method === this.state.detailFilter.value);
-        } else {
-            monthlyData = this.state.data.landingsMonthly.filter(d => d.fish_key === fishKey);
-        }
+        const rawData = this.state.data.landingsMonthlyAreaMethod.filter(d => d.fish_key === fishKey);
+        const filtered = rawData.filter(d => {
+            const areaMatch = this.state.landingsDetailArea === 'all' || d.area === this.state.landingsDetailArea;
+            const methodMatch = this.state.landingsDetailMethod === 'all' || d.method === this.state.landingsDetailMethod;
+            return areaMatch && methodMatch;
+        });
+        
+        // Aggregate by month and year
+        const monthlyAggregated = {};
+        filtered.forEach(d => {
+            const key = `${d.year}-${d.month}`;
+            if (!monthlyAggregated[key]) {
+                monthlyAggregated[key] = { year: d.year, month: d.month, qty: 0, amt: 0 };
+            }
+            monthlyAggregated[key].qty += d.qty;
+            monthlyAggregated[key].amt += d.amt;
+        });
+
+        let monthlyData = Object.values(monthlyAggregated);
         
         // Filter by range (e.g. 5Y)
         const latestYear = Math.max(...this.state.data.landingsYearly.map(d => d.year), 2025);
@@ -786,8 +898,8 @@ const App = {
                     },
                     {
                         type: 'bar',
-                        label: '漁獲量 (t)',
-                        data: monthlyData.map(d => d.qty),
+                        label: '漁獲量 (t)', // Label changed to reflect tons
+                        data: monthlyData.map(d => d.qty / 1000), // Convert to tons
                         backgroundColor: colors.accent + '66',
                         borderColor: colors.accent,
                         borderWidth: 1,
@@ -804,15 +916,21 @@ const App = {
                         position: 'left', 
                         title: { display: true, text: '価格', color: colors.primary }, 
                         grid: { color: colors.grid }, 
-                        ticks: { color: colors.text },
-                        grace: '50%'
+                        ticks: { 
+                            color: colors.text,
+                            callback: (val) => val >= 1000 ? (val/1000).toFixed(1) + 'k' : val
+                        },
+                        grace: '5%'
                     },
                     'y-qty': { 
                         position: 'right', 
-                        title: { display: true, text: '漁獲量', color: colors.accent }, 
+                        title: { display: true, text: '漁獲量 (t)', color: colors.accent }, // Title changed to reflect tons
                         grid: { drawOnChartArea: false }, 
-                        ticks: { color: colors.text },
-                        grace: '50%'
+                        ticks: { 
+                            color: colors.text,
+                            callback: (val) => val >= 100 ? val : val // Now val is already in tons
+                        },
+                        grace: '5%'
                     },
                     x: { ticks: { color: colors.text, font: { size: 10 } }, grid: { color: colors.grid } }
                 }
@@ -821,6 +939,8 @@ const App = {
     },
 
     renderDrillDownTabs(fishKey) {
+        // This function is no longer used with the new multi-filter dropdowns
+        // Keeping it for reference or if it's needed elsewhere.
         const cAll = document.getElementById('drilldown-tabs-all');
         const cArea = document.getElementById('drilldown-tabs-area');
         const cMethod = document.getElementById('drilldown-tabs-method');
@@ -832,9 +952,16 @@ const App = {
 
         // All (全合計)
         const btnAll = document.createElement('button');
-        btnAll.className = `drilldown-tab ${this.state.detailFilter.type === 'all' ? 'active' : ''}`;
+        btnAll.className = `drilldown-tab ${this.state.landingsDetailArea === 'all' && this.state.landingsDetailMethod === 'all' ? 'active' : ''}`;
         btnAll.textContent = '全合計';
-        btnAll.onclick = () => this.setDetailFilter('all', null);
+        btnAll.onclick = () => {
+            this.state.landingsDetailArea = 'all';
+            this.state.landingsDetailMethod = 'all';
+            this.renderLandingsYearlyChart(this.state.selectedFish);
+            this.renderLandingsChart(this.state.selectedFish);
+            this.renderSeasonality(this.state.selectedFish);
+            this.renderDrillDownTabs(this.state.selectedFish); // Re-render tabs to update active state
+        };
         cAll.appendChild(btnAll);
 
         // Areas (地区別)
@@ -849,9 +976,16 @@ const App = {
         
         areas.forEach(a => {
             const btn = document.createElement('button');
-            btn.className = `drilldown-tab ${this.state.detailFilter.type === 'area' && this.state.detailFilter.value === a ? 'active' : ''}`;
+            btn.className = `drilldown-tab ${this.state.landingsDetailArea === a && this.state.landingsDetailMethod === 'all' ? 'active' : ''}`;
             btn.textContent = a;
-            btn.onclick = () => this.setDetailFilter('area', a);
+            btn.onclick = () => {
+                this.state.landingsDetailArea = a;
+                this.state.landingsDetailMethod = 'all';
+                this.renderLandingsYearlyChart(this.state.selectedFish);
+                this.renderLandingsChart(this.state.selectedFish);
+                this.renderSeasonality(this.state.selectedFish);
+                this.renderDrillDownTabs(this.state.selectedFish);
+            };
             cArea.appendChild(btn);
         });
 
@@ -867,119 +1001,131 @@ const App = {
 
         methods.forEach(m => {
             const btn = document.createElement('button');
-            btn.className = `drilldown-tab ${this.state.detailFilter.type === 'method' && this.state.detailFilter.value === m ? 'active' : ''}`;
+            btn.className = `drilldown-tab ${this.state.landingsDetailMethod === m && this.state.landingsDetailArea === 'all' ? 'active' : ''}`;
             btn.textContent = m;
-            btn.onclick = () => this.setDetailFilter('method', m);
+            btn.onclick = () => {
+                this.state.landingsDetailMethod = m;
+                this.state.landingsDetailArea = 'all';
+                this.renderLandingsYearlyChart(this.state.selectedFish);
+                this.renderLandingsChart(this.state.selectedFish);
+                this.renderSeasonality(this.state.selectedFish);
+                this.renderDrillDownTabs(this.state.selectedFish);
+            };
             cMethod.appendChild(btn);
         });
     },
 
     setDetailFilter(type, value) {
-        this.state.detailFilter = { type, value };
-        this.renderDrillDownTabs(this.state.selectedFish);
-        this.renderLandingsYearlyChart(this.state.selectedFish);
-        this.renderLandingsChart(this.state.selectedFish);
-        this.renderSeasonality(this.state.selectedFish);
-        // Stats card reset to appropriate tab or update based on filter?
-        // Let's keep stats card as is for now, but usually it should also reflect.
+        // This function is no longer used with the new multi-filter dropdowns
+        // Keeping it for reference or if it's needed elsewhere.
+        // The new filter logic is handled directly in event listeners for the dropdowns.
     },
 
     renderSeasonality(fishKey) {
         const container = document.getElementById('landings-heatmap');
         if (!container) return;
-        
-        let data = [];
-        if (this.state.detailFilter.type === 'area') {
-            data = this.state.data.landingsMonthArea.filter(d => d.fish_key === fishKey && d.area === this.state.detailFilter.value);
-        } else if (this.state.detailFilter.type === 'method') {
-            data = this.state.data.landingsMonthMethod.filter(d => d.fish_key === fishKey && d.method === this.state.detailFilter.value);
-        } else {
-            data = this.state.data.landingsMonthly.filter(d => d.fish_key === fishKey);
-        }
 
-        if (data.length === 0) { container.innerHTML = 'データがありません'; return; }
+        try {
+            const rawData = this.state.data.landingsMonthlyAreaMethod.filter(d => d.fish_key === fishKey);
+            const filtered = rawData.filter(d => {
+                const areaMatch = this.state.landingsDetailArea === 'all' || d.area === this.state.landingsDetailArea;
+                const methodMatch = this.state.landingsDetailMethod === 'all' || d.method === this.state.landingsDetailMethod;
+                return areaMatch && methodMatch;
+            });
 
-        // Filter by range
-        const latestYear = Math.max(...this.state.data.landingsYearly.map(d => d.year));
-        if (this.state.range !== 'MAX') {
-            const years = { '5Y': 5, '10Y': 10 }[this.state.range];
-            data = data.filter(d => d.year > latestYear - years);
-        }
+            if (filtered.length === 0) { container.innerHTML = '<div class="empty-state">データがありません</div>'; return; }
 
-        const yearMap = {};
-        data.forEach(d => {
-            if (!yearMap[d.year]) {
-                yearMap[d.year] = {
-                    qty: Array(12).fill(0),
-                    priceSum: Array(12).fill(0),
-                    priceCount: Array(12).fill(0)
-                };
+            // Filter by range
+            const latestYear = Math.max(...this.state.data.landingsYearly.map(d => d.year), 2024);
+            let rangeFilteredData = filtered;
+            if (this.state.range !== 'MAX') {
+                const years = { '5Y': 5, '10Y': 10 }[this.state.range];
+                rangeFilteredData = filtered.filter(d => d.year > latestYear - years);
             }
-            yearMap[d.year].qty[d.month - 1] = d.qty;
-            if (d.qty > 0 && d.amt > 0) {
-                yearMap[d.year].priceSum[d.month - 1] += (d.amt / d.qty);
-                yearMap[d.year].priceCount[d.month - 1] += 1;
-            }
-        });
 
-        const allQtys = data.map(d => d.qty);
-        const maxQty = Math.max(...allQtys, 1);
-        
-        // Calculate all prices to find max price
-        let allPrices = [];
-        data.forEach(d => {
-           if (d.qty > 0 && d.amt > 0) allPrices.push(d.amt / d.qty);
-        });
-        const maxPrice = Math.max(...allPrices, 1);
+            const gridMap = {}; 
+            rangeFilteredData.forEach(d => {
+                if (!gridMap[d.year]) gridMap[d.year] = {};
+                if (!gridMap[d.year][d.month]) gridMap[d.year][d.month] = { qty: 0, amt: 0 };
+                gridMap[d.year][d.month].qty += d.qty;
+                gridMap[d.year][d.month].amt += d.amt;
+            });
 
-        const years = Object.keys(yearMap).sort((a, b) => a - b);
-        
-        // Helper to format numbers compactly
-        const fmtQty = (val) => {
-            if (val === 0) return '';
-            if (val >= 1000) return (val/1000).toFixed(1) + 'k';
-            return Math.round(val);
-        };
-        const fmtPrice = (val) => {
-            if (val === 0) return '';
-            if (val >= 10000) return (val/10000).toFixed(1) + '万';
-            if (val >= 1000) return (val/1000).toFixed(1) + 'k';
-            return Math.round(val);
-        };
+            const yearsTotal = Object.keys(gridMap).sort((a, b) => b - a); // Newest first
 
-        const renderCell = (val, max, type) => {
-            let intensity = val > 0 ? Math.ceil((val / max) * 5) : 0;
-            let formatted = type === 'qty' ? fmtQty(val) : fmtPrice(val);
-            let colorClass = type === 'qty' ? (intensity > 0 ? `intensity-${intensity}` : '') : (intensity > 0 ? `intensity-p-${intensity}` : '');
-            return `<div class="heatmap-cell ${colorClass}" title="${type === 'qty' ? '量: '+val.toLocaleString()+'t' : '単価: '+Math.round(val).toLocaleString()+'円'}">${formatted}</div>`;
-        };
+            const fmtQty = (val) => {
+                if (val === 0) return '';
+                if (val >= 1000) return (val/1000).toFixed(1) + 't';
+                return Math.round(val);
+            };
+            const fmtPrice = (val) => {
+                if (val === 0) return '';
+                if (val >= 10000) return (val/10000).toFixed(1) + '万';
+                return Math.round(val);
+            };
 
-        let html = `
-            <div class="heatmap-header-row details-header">
-                <div class="heatmap-year-label">年度 / 月</div>
-                ${Array.from({length: 12}, (_, i) => `<div class="heatmap-header-label">${i+1}月</div>`).join('')}
-            </div>
-        `;
+            const renderCell = (val, max, type) => {
+                let intensity = val > 0 ? Math.ceil((val / max) * 5) : 0;
+                let formatted = type === 'qty' ? fmtQty(val) : fmtPrice(val);
+                let colorClass = type === 'qty' ? (intensity > 0 ? `intensity-${intensity}` : '') : (intensity > 0 ? `intensity-p-${intensity}` : '');
+                let titleText = type === 'qty' ? `水揚げ量: ${Math.round(val).toLocaleString()}kg` : `単価: ¥${Math.round(val).toLocaleString()}/kg`;
+                return `<div class="heatmap-cell ${colorClass}" title="${titleText}">${formatted}</div>`;
+            };
 
-        years.forEach(year => {
-            const yData = yearMap[year];
-            const avgPrices = yData.priceSum.map((sum, i) => yData.priceCount[i] > 0 ? sum / yData.priceCount[i] : 0);
-            
-            html += `
-                <div class="heatmap-year-group-detail">
-                    <div class="heatmap-year-label-col">${year}</div>
+            let html = `
+                <div class="heatmap-year-group-detail details-header">
+                    <div class="heatmap-year-label-col" style="font-size:0.7rem; color:var(--text-secondary)">年度</div>
+                    <div class="heatmap-year-label-col"></div>
                     <div class="heatmap-data-rows-detail">
-                        <div class="heatmap-row-detail qty">
-                            ${yData.qty.map(q => renderCell(q, maxQty, 'qty')).join('')}
-                        </div>
-                        <div class="heatmap-row-detail price">
-                            ${avgPrices.map(p => renderCell(p, maxPrice, 'price')).join('')}
+                        <div class="heatmap-row-detail header">
+                            ${Array.from({length: 12}, (_, i) => `<div class="heatmap-header-label" style="text-align:center;">${i+1}月</div>`).join('')}
                         </div>
                     </div>
                 </div>
             `;
-        });
-        container.innerHTML = html;
+
+            yearsTotal.forEach(year => {
+                const yData = gridMap[year];
+                
+                // Per-year normalization for better visibility of trends in that specific year
+                const rowQtys = Object.values(yData).map(d => d.qty);
+                const rowMaxQty = Math.max(...rowQtys, 1);
+                
+                const rowPrices = Object.values(yData).filter(d => d.qty > 0).map(d => d.amt / d.qty);
+                const rowMaxPrice = Math.max(...rowPrices, 1);
+
+                html += `
+                    <div class="heatmap-year-group-detail">
+                        <div class="heatmap-year-label-col">${year}年</div>
+                        <div class="heatmap-row-label-col">
+                            <div class="heatmap-row-label">量</div>
+                            <div class="heatmap-row-label">単価</div>
+                        </div>
+                        <div class="heatmap-data-rows-detail">
+                            <div class="heatmap-row-detail qty">
+                                ${Array.from({length: 12}, (_, i) => {
+                                    const m = i + 1;
+                                    const qty = (yData[m] && yData[m].qty) ? yData[m].qty : 0;
+                                    return renderCell(qty, rowMaxQty, 'qty');
+                                }).join('')}
+                            </div>
+                            <div class="heatmap-row-detail price">
+                                ${Array.from({length: 12}, (_, i) => {
+                                    const m = i + 1;
+                                    const d = yData[m];
+                                    const price = (d && d.qty > 0) ? d.amt / d.qty : 0;
+                                    return renderCell(price, rowMaxPrice, 'price');
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = `<div style="color:red; padding:1.5rem; text-align:center;">エラー: ${e.message}</div>`;
+        }
     },
 
     renderDetailStats(fishKey) {
@@ -1026,7 +1172,7 @@ const App = {
                     <span class="stat-name">${o[nameField]}</span>
                     <div class="stat-metrics">
                         <span class="stat-val amt">金: ${Math.round(o.amt/10000).toLocaleString()}万円</span>
-                        <span class="stat-val qty">量: ${Math.round(o.qty).toLocaleString()}t</span>
+                        <span class="stat-val qty">量: ${Math.round(o.qty / 1000).toLocaleString()}t</span>
                     </div>
                 </div>
                 <div class="stat-bar-container-double">

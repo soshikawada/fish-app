@@ -322,6 +322,23 @@ def finalize_all(market_raw, landings_raw):
     monthly_meth = monthly_meth.merge(top_methods, on=['fish_key', 'method'])
     apply_label(monthly_meth).to_csv(os.path.join(PRO_DIR, "landings_month_fish_method_top.csv"), index=False, encoding='utf-8')
 
+    print("Generating drill-down monthly area-method...")
+    # ⑨-E landings_month_fish_area_method_top.csv
+    # Group by both area and method for multi-filtering
+    l_area_meth_m = landings_raw.groupby(['年', 'fish_key', '地区名', '漁名'])[qty_cols + amt_cols].sum().reset_index()
+    m_qty_am = l_area_meth_m.melt(id_vars=['年', 'fish_key', '地区名', '漁名'], value_vars=qty_cols, var_name='month_label', value_name='qty')
+    m_amt_am = l_area_meth_m.melt(id_vars=['年', 'fish_key', '地区名', '漁名'], value_vars=amt_cols, var_name='month_label', value_name='amt')
+    m_qty_am['month'] = m_qty_am['month_label'].str.extract('(\d+)').astype(int)
+    m_amt_am['month'] = m_amt_am['month_label'].str.extract('(\d+)').astype(int)
+    
+    monthly_am = m_qty_am.merge(m_amt_am, on=['年', 'month', 'fish_key', '地区名', '漁名'])
+    monthly_am = monthly_am[['年', 'month', 'fish_key', '地区名', '漁名', 'qty', 'amt']]
+    monthly_am.columns = ['year', 'month', 'fish_key', 'area', 'method', 'qty', 'amt']
+    monthly_am = clean_negatives(monthly_am)
+    
+    # We don't filter to top 10 here as we need specific combinations
+    apply_label(monthly_am).to_csv(os.path.join(PRO_DIR, "landings_month_fish_area_method_top.csv"), index=False, encoding='utf-8')
+
     # ⑨-B landings_top_fish_latest.csv (For the new Catch Volume View)
     latest_l_year = l_year['year'].max()
     l_latest = l_year[l_year['year'] == latest_l_year].copy()
@@ -379,6 +396,7 @@ def create_manifest():
             "landingsMonthFish": "landings_month_fish.csv",
             "landingsMonthFishArea": "landings_month_fish_area_top.csv",
             "landingsMonthFishMethod": "landings_month_fish_method_top.csv",
+            "landingsMonthFishAreaMethod": "landings_month_fish_area_method_top.csv",
             "landingsYearFishAreaTop": "landings_year_fish_area_top.csv",
             "landingsYearFishMethodTop": "landings_year_fish_method_top.csv",
             "corrFish": "corr_fish_market_vs_landings.csv"

@@ -15,6 +15,7 @@
     "landingsMonthFish": "landings_month_fish.csv",
     "landingsMonthFishArea": "landings_month_fish_area_top.csv",
     "landingsMonthFishMethod": "landings_month_fish_method_top.csv",
+    "landingsMonthFishAreaMethod": "landings_month_fish_area_method_top.csv",
     "landingsYearFishAreaTop": "landings_year_fish_area_top.csv",
     "landingsYearFishMethodTop": "landings_year_fish_method_top.csv",
     "corrFish": "corr_fish_market_vs_landings.csv"
