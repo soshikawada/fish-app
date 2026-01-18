@@ -70,8 +70,8 @@ const App = {
             
             if (window.lucide) lucide.createIcons();
 
-            // 4. Wait for a couple of frames to ensure the browser has painted the cards
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            // 4. Wait for a single frame to ensure the browser has started painting
+            await new Promise(resolve => requestAnimationFrame(resolve));
 
             // 5. Finally, hide the loader
             document.body.classList.add('loaded');

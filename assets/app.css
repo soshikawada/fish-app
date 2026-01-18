@@ -1330,7 +1330,7 @@ h1, h2, h3, .logo {
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s;
 }
 
 body.loaded #app-loader {
@@ -1422,16 +1422,16 @@ body.loaded #app-loader {
 
 @keyframes progress-load {
   0% { width: 0%; }
-  10% { width: 5%; }
-  30% { width: 20%; }
-  60% { width: 45%; }
-  85% { width: 80%; }
+  10% { width: 10%; }
+  30% { width: 30%; }
+  60% { width: 60%; }
+  85% { width: 85%; }
   100% { width: 100%; }
 }
 
 #app {
   opacity: 0;
-  transition: opacity 1s ease-in-out;
+  transition: opacity 0.4s ease-in-out;
 }
 
 body.loaded #app {
