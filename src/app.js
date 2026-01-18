@@ -50,8 +50,8 @@ const App = {
 
     async init() {
         console.log("Initializing App...");
-        // Start the minimum 7-second timer immediately
-        const minimumLoadTime = new Promise(resolve => setTimeout(resolve, 7000));
+        // Start the minimum 2-second timer immediately (reduced from 7s for better speed)
+        const minimumLoadTime = new Promise(resolve => setTimeout(resolve, 2000));
         
         try {
             // 1. Fetch manifest and then start data loading in parallel with the timer
