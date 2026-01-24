@@ -373,8 +373,8 @@ const App = {
                     <div class="fish-card-metrics">
                         <div class="metric-item"><div class="metric-label">最新年の売上シェア率</div><div class="metric-value">${share}%</div></div>
                         <div class="metric-item"><div class="metric-label">最新年の販売量</div><div class="metric-value">${Math.round(item.latest_qty / 1000).toLocaleString()}t</div></div>
-                        <div class="metric-item"><div class="metric-label">最新年の売れてる産地</div><div class="metric-value">${amtOrigin}</div></div>
-                        <div class="metric-item"><div class="metric-label">最新年の仕入れ量の多い産地</div><div class="metric-value">${qtyOrigin}</div></div>
+                        <div class="metric-item"><div class="metric-label">最新年の売上が高い産地</div><div class="metric-value">${amtOrigin}</div></div>
+                        <div class="metric-item"><div class="metric-label">最新年の数量の多い産地</div><div class="metric-value">${qtyOrigin}</div></div>
                     </div>
                 </div>
             `;
